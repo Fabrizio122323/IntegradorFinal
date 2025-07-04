@@ -1,0 +1,10 @@
+Servicio: cuarto, Costo: $70
+Servicio: almuerzo , cena , Costo: $100
+Servicio: completo , Costo: $150.00
+Servicio: Todo completo, Costo: $13.00
+Servicio: Juanito + Todo Completo, Costo: $20.00
+Completo|200.0
+Completo|200.0
+almuerzo, cena, bebidas + Todo Completo|200.0
+Todo completo + Todo Completo|150.0
+Bebidas + Bebidas|45.0

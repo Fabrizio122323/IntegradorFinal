@@ -1,0 +1,13 @@
+Cliente: Marisabel, Habitación: 205
+Cliente: , Habitación: 
+Cliente: juanito, Habitación: 205
+Cliente: Juan, Habitación: 204, Reservado el: 2025-07-03T11:25:53.483453
+Juanito|P1|true|03/07/2025|06/07/2025|13:01
+Juanito|M1|true|03/07/2025|06/07/2026|16:20
+Juan|I1|true|03/07/2025|08/07/2025|16:40
+Renato Suarez|I2|true|03/07/2025|11/07/2025|16:40
+Renatito|I1|true|03/07/2025|19/07/2025|16:50
+Renatito|I1|true|03/07/2025|13/07/2025|16:53
+Hans|I1|true|03/07/2025|11/07/2025|16:55
+Hanselsito|P1|PRESIDENCIAL|150.0|true|03/07/2025|13/07/2025|17:03
+Renzo|P2|PRESIDENCIAL|150.0|true|03/07/2025|09/07/2025|17:10
