@@ -1,9 +1,4 @@
-// Archivo: HotelAppRefactor.java
 package ho;
-
-
-
-
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -12,20 +7,40 @@ import java.awt.event.*;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import com.toedter.calendar.JDateChooser;
+import javax.swing.Timer;
 
 // === MODELOS ===
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.BufferedWriter;
 import java.text.SimpleDateFormat;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import javax.swing.table.TableCellRenderer;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.io.*;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.*;
+import javax.swing.table.DefaultTableCellRenderer;
+
 class Alojamiento {
-    private final String cliente;
+
+    private String cliente;
     private final Habitacion habitacion;
     private final boolean anticipado;
     private final Date entrada;
     private final Date salida;
     private final String hora;
+    private String dni;
+    private String celular;
+    private String servicio;
+    private int diasEstadia;
 
     public Alojamiento(String cliente, Habitacion habitacion, boolean anticipado, Date entrada, Date salida, String hora) {
         this.cliente = cliente;
@@ -36,45 +51,132 @@ class Alojamiento {
         this.hora = hora;
     }
 
-    public String getCliente() { return cliente; }
-    public Date getFechaEntrada() { return entrada; }
-    public Date getFechaSalida() { return salida; }
-    public String getHora() { return hora; }
-    public boolean isAnticipado() { return anticipado; }
-    public Habitacion getHabitacion() { return habitacion; }
+    public String getCliente() {
+        return cliente;
+    }
+
+    public void setCliente(String cliente) {
+        this.cliente = cliente;
+    }
+
+    public String getDni() {
+        return dni;
+    }
+
+    public void setDni(String dni) {
+        this.dni = dni;
+    }
+
+    public String getCelular() {
+        return celular;
+    }
+
+    public void setCelular(String celular) {
+        this.celular = celular;
+    }
+
+    public String getServicio() {
+        return servicio;
+    }
+
+    public void setServicio(String servicio) {
+        this.servicio = servicio;
+    }
+
+    public int getDiasEstadia() {
+        return diasEstadia;
+    }
+
+    public void setDiasEstadia(int dias) {
+        this.diasEstadia = dias;
+    }
+
+    public Date getFechaEntrada() {
+        return entrada;
+    }
+
+    public Date getFechaSalida() {
+        return salida;
+    }
+
+    public String getHora() {
+        return hora;
+    }
+
+    public boolean isAnticipado() {
+        return anticipado;
+    }
+
+    public Habitacion getHabitacion() {
+        return habitacion;
+    }
 
     @Override
     public String toString() {
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-        return cliente + "|" + habitacion.getNumero() + "|" + anticipado + "|" + sdf.format(entrada) + "|" + sdf.format(salida) + "|" + hora;
+        return cliente + "|" + habitacion.getNumero() + "|" + anticipado + "|"
+                + sdf.format(entrada) + "|" + sdf.format(salida) + "|" + hora + "|"
+                + dni + "|" + celular + "|" + servicio + "|" + diasEstadia;
     }
 }
 
 class Servicio {
-    private final String nombre;
-    private final double costo;
-    public Servicio(String nombre, double costo) {
+
+    private int id;
+    private String nombre;
+    private double precio;
+
+    // Constructor completo (usado al cargar desde archivo)
+    public Servicio(int id, String nombre, double precio) {
+        this.id = id;
         this.nombre = nombre;
-        this.costo = costo;
+        this.precio = precio;
     }
+
+    // Constructor corto (usado cuando se genera ID después)
+    public Servicio(String nombre, double precio) {
+        this.id = 0; // o puedes implementar lógica para generar ID único
+        this.nombre = nombre;
+        this.precio = precio;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
     public String getNombre() {
         return nombre;
     }
-    public double getCosto() {
-        return costo;
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
     }
+
+    public double getPrecio() {
+        return precio;
+    }
+
+    public void setPrecio(double precio) {
+        this.precio = precio;
+    }
+
     @Override
     public String toString() {
-        return nombre + "|" + costo;
+        return nombre + " ($" + precio + ")";
     }
 }
 
 class Habitacion {
-    private final int id;
-    private final String numero;
+
+    private int id;
+    private String numero;
     private String estado;
-    private final double precio;
-    private final String tipo;
+    private double precio;
+    private String tipo;
 
     public Habitacion(int id, String numero, String estado, double precio, String tipo) {
         this.id = id;
@@ -88,8 +190,16 @@ class Habitacion {
         return id;
     }
 
+    public void setId(int id) {
+        this.id = id;
+    }
+
     public String getNumero() {
         return numero;
+    }
+
+    public void setNumero(String numero) {
+        this.numero = numero;
     }
 
     public String getEstado() {
@@ -104,8 +214,16 @@ class Habitacion {
         return precio;
     }
 
+    public void setPrecio(double precio) {
+        this.precio = precio;
+    }
+
     public String getTipo() {
         return tipo;
+    }
+
+    public void setTipo(String tipo) {
+        this.tipo = tipo;
     }
 
     @Override
@@ -114,32 +232,39 @@ class Habitacion {
     }
 }
 
-// === DAO ===
 interface DAO<T> {
 
-    void guardar(T t);
+    void guardar(T obj);
 
     List<T> cargar();
+
+    void actualizar(T obj);
+
+    void eliminar(T obj);
 }
 
-class AlojamientoDAO implements DAO<Alojamiento> {
+class AlojamientoDAO {
 
     private final File archivo = new File("alojamientos.txt");
 
-    @Override
     public void guardar(Alojamiento alojamiento) {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(archivo, true))) {
             Habitacion h = alojamiento.getHabitacion();
             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
 
-            String linea = alojamiento.getCliente() + "|" +
-                    h.getNumero() + "|" +
-                    h.getTipo() + "|" +
-                    h.getPrecio() + "|" +
-                    alojamiento.isAnticipado() + "|" +
-                    sdf.format(alojamiento.getFechaEntrada()) + "|" +
-                    sdf.format(alojamiento.getFechaSalida()) + "|" +
-                    alojamiento.getHora();
+            String linea = alojamiento.getCliente() + "|"
+                    + h.getId() + "|"
+                    + h.getNumero() + "|"
+                    + h.getTipo() + "|"
+                    + h.getPrecio() + "|"
+                    + alojamiento.isAnticipado() + "|"
+                    + sdf.format(alojamiento.getFechaEntrada()) + "|"
+                    + sdf.format(alojamiento.getFechaSalida()) + "|"
+                    + alojamiento.getHora() + "|"
+                    + alojamiento.getDni() + "|"
+                    + alojamiento.getCelular() + "|"
+                    + alojamiento.getDiasEstadia() + "|"
+                    + alojamiento.getServicio();
 
             bw.write(linea);
             bw.newLine();
@@ -147,29 +272,38 @@ class AlojamientoDAO implements DAO<Alojamiento> {
             JOptionPane.showMessageDialog(null, "Error guardando alojamiento.");
         }
     }
-    @Override
+
     public List<Alojamiento> cargar() {
         List<Alojamiento> lista = new ArrayList<>();
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
 
         try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
             String linea;
-
             while ((linea = br.readLine()) != null) {
                 String[] partes = linea.split("\\|");
 
-                if (partes.length == 8) {
+                if (partes.length >= 13) {
                     String cliente = partes[0];
-                    String numHab = partes[1];
-                    String tipo = partes[2];
-                    double precio = Double.parseDouble(partes[3]);
-                    boolean anticipado = Boolean.parseBoolean(partes[4]);
-                    Date entrada = sdf.parse(partes[5]);
-                    Date salida = sdf.parse(partes[6]);
-                    String hora = partes[7];
+                    int id = Integer.parseInt(partes[1]);
+                    String numHab = partes[2];
+                    String tipo = partes[3];
+                    double precio = Double.parseDouble(partes[4]);
+                    boolean anticipado = Boolean.parseBoolean(partes[5]);
+                    Date entrada = sdf.parse(partes[6]);
+                    Date salida = sdf.parse(partes[7]);
+                    String hora = partes[8];
+                    String dni = partes[9];
+                    String celular = partes[10];
+                    int diasEstadia = Integer.parseInt(partes[11]);
+                    String servicio = partes[12];
 
-                    Habitacion h = new Habitacion(0, numHab, "OCUPADO", precio, tipo);
-                    lista.add(new Alojamiento(cliente, h, anticipado, entrada, salida, hora));
+                    Habitacion h = new Habitacion(id, numHab, "OCUPADO", precio, tipo);
+                    Alojamiento a = new Alojamiento(cliente, h, anticipado, entrada, salida, hora);
+                    a.setDni(dni);
+                    a.setCelular(celular);
+                    a.setDiasEstadia(diasEstadia);
+                    a.setServicio(servicio);
+                    lista.add(a);
                 }
             }
         } catch (Exception e) {
@@ -178,39 +312,149 @@ class AlojamientoDAO implements DAO<Alojamiento> {
 
         return lista;
     }
+
+    public void actualizar(Alojamiento a) {
+        List<Alojamiento> lista = cargar();
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(archivo))) {
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+            for (Alojamiento alo : lista) {
+                if (alo.getHabitacion().getId() == a.getHabitacion().getId()) {
+                    alo = a;
+                }
+                Habitacion h = alo.getHabitacion();
+                String linea = alo.getCliente() + "|"
+                        + h.getId() + "|"
+                        + h.getNumero() + "|"
+                        + h.getTipo() + "|"
+                        + h.getPrecio() + "|"
+                        + alo.isAnticipado() + "|"
+                        + sdf.format(alo.getFechaEntrada()) + "|"
+                        + sdf.format(alo.getFechaSalida()) + "|"
+                        + alo.getHora() + "|"
+                        + alo.getDni() + "|"
+                        + alo.getCelular() + "|"
+                        + alo.getDiasEstadia() + "|"
+                        + alo.getServicio();
+
+                bw.write(linea);
+                bw.newLine();
+            }
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(null, "Error actualizando alojamiento.");
+        }
+    }
+
+    public void eliminar(Alojamiento a) {
+        List<Alojamiento> lista = cargar();
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(archivo))) {
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+            for (Alojamiento alo : lista) {
+                if (alo.getHabitacion().getId() != a.getHabitacion().getId()) {
+                    Habitacion h = alo.getHabitacion();
+                    String linea = alo.getCliente() + "|"
+                            + h.getId() + "|"
+                            + h.getNumero() + "|"
+                            + h.getTipo() + "|"
+                            + h.getPrecio() + "|"
+                            + alo.isAnticipado() + "|"
+                            + sdf.format(alo.getFechaEntrada()) + "|"
+                            + sdf.format(alo.getFechaSalida()) + "|"
+                            + alo.getHora() + "|"
+                            + alo.getDni() + "|"
+                            + alo.getCelular() + "|"
+                            + alo.getDiasEstadia() + "|"
+                            + alo.getServicio();
+
+                    bw.write(linea);
+                    bw.newLine();
+                }
+            }
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(null, "Error eliminando alojamiento.");
+        }
+    }
+
+    public Alojamiento obtenerPorHabitacionId(int id) {
+        for (Alojamiento a : cargar()) {
+            if (a.getHabitacion().getId() == id) {
+                return a;
+            }
+        }
+        return null;
+    }
 }
 
 class ServicioDAO implements DAO<Servicio> {
+
     private final File archivo = new File("servicios.txt");
+
+    @Override
     public void guardar(Servicio servicio) {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(archivo, true))) {
-            bw.write(servicio.toString());
+            bw.write(servicio.getId() + "|" + servicio.getNombre() + "|" + servicio.getPrecio());
             bw.newLine();
         } catch (IOException e) {
             JOptionPane.showMessageDialog(null, "Error guardando servicio.");
         }
     }
+
+    @Override
     public List<Servicio> cargar() {
         List<Servicio> lista = new ArrayList<>();
         try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
             String linea;
             while ((linea = br.readLine()) != null) {
                 String[] partes = linea.split("\\|");
-                if (partes.length == 2) {
-                    String nombre = partes[0];
-                    double costo = Double.parseDouble(partes[1]);
-                    lista.add(new Servicio(nombre, costo));
+                if (partes.length == 3) {
+                    int id = Integer.parseInt(partes[0]);
+                    String nombre = partes[1];
+                    double precio = Double.parseDouble(partes[2]);
+                    lista.add(new Servicio(id, nombre, precio));
                 }
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             JOptionPane.showMessageDialog(null, "Error cargando servicios.");
         }
         return lista;
     }
+
+    @Override
+    public void eliminar(Servicio servicio) {
+        List<Servicio> lista = cargar();
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(archivo))) {
+            for (Servicio s : lista) {
+                if (s.getId() != servicio.getId()) {
+                    bw.write(s.getId() + "|" + s.getNombre() + "|" + s.getPrecio());
+                    bw.newLine();
+                }
+            }
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(null, "Error eliminando servicio.");
+        }
+    }
+
+    @Override
+    public void actualizar(Servicio servicioActualizado) {
+        List<Servicio> servicios = cargar();
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(archivo))) {
+            for (Servicio s : servicios) {
+                if (s.getId() == servicioActualizado.getId()) {
+                    s = servicioActualizado;
+                }
+                bw.write(s.getId() + "|" + s.getNombre() + "|" + s.getPrecio());
+                bw.newLine();
+            }
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(null, "Error actualizando servicio.");
+        }
+    }
 }
 
 class HabitacionDAO implements DAO<Habitacion> {
+
     private final File archivo = new File("habitaciones.txt");
+
+    @Override
     public void guardar(Habitacion habitacion) {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(archivo, true))) {
             bw.write(habitacion.getId() + "|" + habitacion.getNumero() + "|" + habitacion.getEstado() + "|" + habitacion.getPrecio() + "|" + habitacion.getTipo());
@@ -219,12 +463,14 @@ class HabitacionDAO implements DAO<Habitacion> {
             JOptionPane.showMessageDialog(null, "Error guardando habitación.");
         }
     }
-    public List<Habitacion> cargar() {
-        List<Habitacion> lista = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
-            String linea;
-            while ((linea = br.readLine()) != null) {
-                String[] partes = linea.split("\\|");
+
+@Override
+public List<Habitacion> cargar() {
+    List<Habitacion> lista = new ArrayList<>();
+    try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
+        String linea;
+        while ((linea = br.readLine()) != null) {
+            String[] partes = linea.split("\\|");
                 if (partes.length == 5) {
                     int id = Integer.parseInt(partes[0]);
                     String numero = partes[1];
@@ -237,200 +483,335 @@ class HabitacionDAO implements DAO<Habitacion> {
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "Error cargando habitaciones.");
         }
+
+        // ⚠️ Solo genera las habitaciones si el archivo está completamente vacío
+        if (lista.isEmpty()) {
+            List<Habitacion> nuevas = new ArrayList<>();
+            int id = 1;
+
+            // 85 individuales
+            for (int i = 1; i <= 85; i++) {
+                nuevas.add(new Habitacion(id++, "IND" + String.format("%03d", i), "DISPONIBLE", 80, "INDIVIDUAL"));
+            }
+
+            // 45 matrimoniales
+            for (int i = 1; i <= 45; i++) {
+                nuevas.add(new Habitacion(id++, "MAT" + String.format("%03d", i), "DISPONIBLE", 120, "MATRIMONIAL"));
+            }
+
+            // 65 familiares
+            for (int i = 1; i <= 65; i++) {
+                nuevas.add(new Habitacion(id++, "FAM" + String.format("%03d", i), "DISPONIBLE", 150, "FAMILIAR"));
+            }
+
+            // 35 presidenciales
+            for (int i = 1; i <= 35; i++) {
+                nuevas.add(new Habitacion(id++, "PRE" + String.format("%03d", i), "DISPONIBLE", 200, "PRESIDENCIAL"));
+            }
+
+            for (Habitacion h : nuevas) {
+                guardar(h);
+            }
+
+            return nuevas;
+        }
+
         return lista;
     }
-}
 
+    @Override
+    public void eliminar(Habitacion habitacion) {
+        List<Habitacion> habitaciones = cargar();
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(archivo))) {
+            for (Habitacion h : habitaciones) {
+                if (h.getId() != habitacion.getId()) {
+                    bw.write(h.getId() + "|" + h.getNumero() + "|" + h.getEstado() + "|" + h.getPrecio() + "|" + h.getTipo());
+                    bw.newLine();
+                }
+            }
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(null, "Error eliminando habitación.");
+        }
+    }
+
+    public void actualizar(Habitacion habitacionActualizada) {
+        List<Habitacion> habitaciones = cargar();
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(archivo))) {
+            for (Habitacion h : habitaciones) {
+                if (h.getId() == habitacionActualizada.getId()) {
+                    h = habitacionActualizada;
+                }
+                bw.write(h.getId() + "|" + h.getNumero() + "|" + h.getEstado() + "|" + h.getPrecio() + "|" + h.getTipo());
+                bw.newLine();
+            }
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(null, "Error actualizando habitación.");
+        }
+    }
+}
+    
 // === FORMULARIO HABITACION ACTUALIZADO ===
 class FormularioHabitacion extends JFrame {
-    private final JTextField txtNumero, txtPrecio, txtBuscar, txtDias;
-    private final JComboBox<String> cboEstado = null, cboTipo, cboFiltroEstado, cboPago, cboServicio;
-    private final JTable tabla;
-    private final DefaultTableModel modelo;
+    private JPanel panelHabitaciones;
+    private JComboBox<String> filtroTipo;
     private final HabitacionDAO habitacionDAO = new HabitacionDAO();
     private final AlojamientoDAO alojamientoDAO = new AlojamientoDAO();
-    private final ArrayList<Habitacion> listaHabitaciones = new ArrayList<>();
-    private int contadorId = 1;
 
     public FormularioHabitacion() {
-        setTitle("Gestión de Habitaciones");
-        setSize(1000, 500);
+        setTitle("Gestión Visual de Habitaciones");
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        setLayout(null);
 
-        JPanel panelRegistro = new JPanel();
-        panelRegistro.setLayout(null);
-        panelRegistro.setBounds(10, 10, 300, 430);
-        panelRegistro.setBackground(Color.PINK);
-        add(panelRegistro);
+        JPanel panelSuperior = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panelSuperior.setBorder(BorderFactory.createEmptyBorder(10, 10, 0, 10));
+        panelSuperior.add(new JLabel("Filtrar por tipo:"));
+        filtroTipo = new JComboBox<>(new String[]{"TODOS", "INDIVIDUAL", "MATRIMONIAL", "FAMILIAR", "PRESIDENCIAL"});
+        filtroTipo.addActionListener(e -> cargarBotonesHabitacion());
+        panelSuperior.add(filtroTipo);
+        add(panelSuperior, BorderLayout.NORTH);
 
-        panelRegistro.add(new JLabel("Tipo de Habitación:")).setBounds(10, 10, 150, 20);
-        cboTipo = new JComboBox<>(new String[]{"INDIVIDUAL", "MATRIMONIAL", "FAMILIAR", "PRESIDENCIAL"});
-        cboTipo.setBounds(150, 10, 130, 20);
-        panelRegistro.add(cboTipo);
+        panelHabitaciones = new JPanel(new GridLayout(0, 5, 15, 15));
+        panelHabitaciones.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        panelRegistro.add(new JLabel("Nombre Completo:")).setBounds(10, 40, 130, 20);
-        txtNumero = new JTextField();
-        txtNumero.setBounds(150, 40, 130, 20);
-        panelRegistro.add(txtNumero);
+        inicializarHabitacionesSiNoExisten();
+        cargarBotonesHabitacion();
 
-        panelRegistro.add(new JLabel("DNI/Carnet:")).setBounds(10, 70, 130, 20);
-        txtBuscar = new JTextField();
-        txtBuscar.setBounds(150, 70, 130, 20);
-        panelRegistro.add(txtBuscar);
+        JScrollPane scroll = new JScrollPane(panelHabitaciones);
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+        add(scroll, BorderLayout.CENTER);
+    }
 
-        panelRegistro.add(new JLabel("Precio Diario:")).setBounds(10, 100, 130, 20);
-        txtPrecio = new JTextField();
-        txtPrecio.setBounds(150, 100, 130, 20);
-        txtPrecio.setEditable(false);
-        panelRegistro.add(txtPrecio);
+    private void cargarBotonesHabitacion() {
+        panelHabitaciones.removeAll();
+        List<Habitacion> habitaciones = habitacionDAO.cargar();
+        String filtro = (String) filtroTipo.getSelectedItem();
 
-        panelRegistro.add(new JLabel("Días de Estancia:")).setBounds(10, 130, 130, 20);
-        txtDias = new JTextField();
-        txtDias.setBounds(150, 130, 130, 20);
-        panelRegistro.add(txtDias);
-
-        panelRegistro.add(new JLabel("Servicio:")).setBounds(10, 160, 130, 20);
-        cboServicio = new JComboBox<>(new String[]{"NINGUNO", "ALMUERZO", "CENA", "BEBIDAS", "PAQUETE COMPLETO"});
-        cboServicio.setBounds(150, 160, 130, 20);
-        panelRegistro.add(cboServicio);
-
-        panelRegistro.add(new JLabel("Método de Pago:")).setBounds(10, 190, 130, 20);
-        cboPago = new JComboBox<>(new String[]{"EFECTIVO", "TARJETA"});
-        cboPago.setBounds(150, 190, 130, 20);
-        panelRegistro.add(cboPago);
-
-        JButton btnRegistrar = new JButton("Registrar");
-        btnRegistrar.setBounds(90, 230, 120, 25);
-        panelRegistro.add(btnRegistrar);
-
-        cboFiltroEstado = new JComboBox<>(new String[]{"DISPONIBLE", "OCUPADO"});
-        cboFiltroEstado.setBounds(320, 10, 120, 20);
-        add(cboFiltroEstado);
-
-        JButton btnBuscar = new JButton("Buscar");
-        btnBuscar.setBounds(450, 10, 80, 20);
-        add(btnBuscar);
-
-        modelo = new DefaultTableModel();
-        modelo.setColumnIdentifiers(new Object[]{"ID", "Número", "Tipo", "Estado", "Precio", "Cliente", "DNI", "Celular", "Días", "Total", "Gestionar"});
-        tabla = new JTable(modelo) {
-            public boolean isCellEditable(int row, int column) {
-                return column == 10;
+        for (Habitacion h : habitaciones) {
+            if (!"TODOS".equals(filtro) && !h.getTipo().equalsIgnoreCase(filtro)) {
+                continue;
             }
-        };
-        JScrollPane scroll = new JScrollPane(tabla);
-        scroll.setBounds(320, 40, 650, 400);
-        add(scroll);
 
-        cboTipo.addActionListener(e -> actualizarPrecioPorTipo());
+            String label = String.format("<html><center><b>Habitación %s</b><br><span style='font-size:16pt;'>%s</span><br><span style='color:gray;'>Precio x día:</span><br><b>S/. %.2f</b></center></html>",
+                    h.getTipo().substring(0, 1).toUpperCase() + h.getTipo().substring(1).toLowerCase(),
+                    h.getNumero().replace("HAB", ""),
+                    h.getPrecio());
 
-        btnRegistrar.addActionListener(e -> {
-            try {
-                String tipo = (String) cboTipo.getSelectedItem();
-                String cliente = txtNumero.getText();
-                String dni = txtBuscar.getText();
-                double precio = Double.parseDouble(txtPrecio.getText());
-                int dias = Integer.parseInt(txtDias.getText());
-                String metodoPago = (String) cboPago.getSelectedItem();
-                String servicio = (String) cboServicio.getSelectedItem();
-                String numeroHab = "HAB" + String.format("%03d", contadorId);
+            JButton btn = new JButton(label);
+            btn.setPreferredSize(new Dimension(160, 120));
+            btn.setFont(new Font("Arial", Font.PLAIN, 12));
 
-                double precioServicio = switch (servicio) {
-                    case "ALMUERZO" -> 10;
-                    case "CENA" -> 12;
-                    case "BEBIDAS" -> 14;
-                    case "PAQUETE COMPLETO" -> 30;
-                    default -> 0;
-                };
+            switch (h.getEstado()) {
+                case "DISPONIBLE" ->
+                    btn.setBackground(new Color(76, 175, 80));
+                case "OCUPADO" ->
+                    btn.setBackground(new Color(244, 67, 54));
+                default ->
+                    btn.setBackground(Color.LIGHT_GRAY);
+            }
 
-                double total = (dias * precio) + (dias * precioServicio);
-                double igv = total * 0.18;
-                double totalConIGV = total + igv;
+            btn.setForeground(Color.WHITE);
+            btn.setFocusPainted(false);
+            btn.setOpaque(true);
 
-                Habitacion h = new Habitacion(contadorId++, numeroHab, "OCUPADO", precio, tipo);
+            btn.addActionListener(e -> {
+                if (h.getEstado().equals("DISPONIBLE")) {
+                    mostrarFormularioRegistro(h);
+                } else if (h.getEstado().equals("OCUPADO")) {
+                    Alojamiento a = alojamientoDAO.obtenerPorHabitacionId(h.getId());
+                    if (a != null) {
+                        mostrarPanelGestion(a);
+                    }
+                }
+            });
+
+            panelHabitaciones.add(btn);
+        }
+
+        panelHabitaciones.revalidate();
+        panelHabitaciones.repaint();
+    }
+
+    private void inicializarHabitacionesSiNoExisten() {
+        List<Habitacion> existentes = habitacionDAO.cargar();
+
+        Map<String, Integer> conteoPorTipo = new HashMap<>();
+        for (Habitacion h : existentes) {
+            conteoPorTipo.put(h.getTipo(), conteoPorTipo.getOrDefault(h.getTipo(), 0) + 1);
+        }
+
+        String[] tipos = {"INDIVIDUAL", "MATRIMONIAL", "FAMILIAR", "PRESIDENCIAL"};
+        double[] precios = {80, 120, 150, 200};
+        int[] pisos = {1, 2, 3, 4};
+
+        int id = existentes.stream().mapToInt(Habitacion::getId).max().orElse(0) + 1;
+
+        for (int i = 0; i < tipos.length; i++) {
+            String tipo = tipos[i];
+            double precio = precios[i];
+            int piso = pisos[i];
+
+            int existentesPorTipo = conteoPorTipo.getOrDefault(tipo, 0);
+
+            for (int j = existentesPorTipo + 1; j <= 50; j++) {
+                String numero = String.format("%d%02d", piso, j); // Ej: 101, 102...
+                Habitacion h = new Habitacion(id++, "HAB" + numero, "DISPONIBLE", precio, tipo);
                 habitacionDAO.guardar(h);
+            }
+        }
+    }
 
-                JButton btnGestionar = new JButton("Gestionar");
-                btnGestionar.addActionListener(evt -> mostrarPanelGestion(cliente, dni, dias, tipo, servicio, precio, precioServicio));
+    private void mostrarFormularioRegistro(Habitacion habitacion) {
+        JTextField txtCliente = new JTextField();
+        JTextField txtDni = new JTextField();
+        JTextField txtDias = new JTextField();
+        JComboBox<String> cboServicio = new JComboBox<>(new String[]{"NINGUNO", "ALMUERZO", "CENA", "BEBIDAS", "PAQUETE COMPLETO"});
+        JComboBox<String> cboPago = new JComboBox<>(new String[]{"EFECTIVO", "TARJETA"});
+        JLabel lblTotal = new JLabel("Total con IGV: S/. 0.00");
 
-                modelo.addRow(new Object[]{h.getId(), h.getNumero(), h.getTipo(), h.getEstado(), h.getPrecio(), cliente, dni, "987654321", dias, totalConIGV, btnGestionar});
-                JOptionPane.showMessageDialog(this, "Usuario registrado correctamente. Total con IGV: S/." + totalConIGV);
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error al registrar. Verifique los datos ingresados.");
+        JPanel panel = new JPanel(new GridLayout(0, 2));
+        panel.add(new JLabel("Cliente:"));
+        panel.add(txtCliente);
+        panel.add(new JLabel("DNI:"));
+        panel.add(txtDni);
+        panel.add(new JLabel("Días:"));
+        panel.add(txtDias);
+        panel.add(new JLabel("Servicio:"));
+        panel.add(cboServicio);
+        panel.add(new JLabel("Pago:"));
+        panel.add(cboPago);
+        panel.add(new JLabel(""));
+        panel.add(lblTotal);
+
+        txtDias.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                actualizarTotal();
+            }
+
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                actualizarTotal();
+            }
+
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                actualizarTotal();
+            }
+
+            private void actualizarTotal() {
+                try {
+                    int dias = Integer.parseInt(txtDias.getText());
+                    double precioBase = habitacion.getPrecio();
+                    double precioServicio = switch ((String) cboServicio.getSelectedItem()) {
+                        case "ALMUERZO" ->
+                            10;
+                        case "CENA" ->
+                            12;
+                        case "BEBIDAS" ->
+                            14;
+                        case "PAQUETE COMPLETO" ->
+                            30;
+                        default ->
+                            0;
+                    };
+                    double total = (precioBase + precioServicio) * dias * 1.18;
+                    lblTotal.setText("Total con IGV: S/. " + String.format("%.2f", total));
+                } catch (NumberFormatException ex) {
+                    lblTotal.setText("Total con IGV: S/. 0.00");
+                }
             }
         });
 
-        btnBuscar.addActionListener(e -> actualizarTablaHabitaciones((String) cboFiltroEstado.getSelectedItem()));
-        cboFiltroEstado.addActionListener(e -> actualizarTablaHabitaciones((String) cboFiltroEstado.getSelectedItem()));
-    }
+        int option = JOptionPane.showConfirmDialog(this, panel, "Registrar Alojamiento", JOptionPane.OK_CANCEL_OPTION);
+        if (option == JOptionPane.OK_OPTION) {
+            try {
+                int dias = Integer.parseInt(txtDias.getText());
+                double precioBase = habitacion.getPrecio();
+                double precioServicio = switch ((String) cboServicio.getSelectedItem()) {
+                    case "ALMUERZO" ->
+                        10;
+                    case "CENA" ->
+                        12;
+                    case "BEBIDAS" ->
+                        14;
+                    case "PAQUETE COMPLETO" ->
+                        30;
+                    default ->
+                        0;
+                };
+                double total = (precioBase + precioServicio) * dias;
+                double totalIGV = total * 1.18;
 
-    private void actualizarPrecioPorTipo() {
-        String tipo = (String) cboTipo.getSelectedItem();
-        switch (tipo) {
-            case "INDIVIDUAL" -> txtPrecio.setText("80");
-            case "MATRIMONIAL" -> txtPrecio.setText("120");
-            case "FAMILIAR" -> txtPrecio.setText("150");
-            case "PRESIDENCIAL" -> txtPrecio.setText("200");
-        }
-    }
+                Alojamiento a = new Alojamiento(txtCliente.getText(), habitacion, true, new Date(), new Date(), "00:00");
+                a.setDni(txtDni.getText());
+                a.setCelular("987654321");
+                a.setServicio((String) cboServicio.getSelectedItem());
+                a.setDiasEstadia(dias);
 
-    private void actualizarTablaHabitaciones(String estado) {
-        modelo.setRowCount(0);
-        List<Alojamiento> alojamientos = alojamientoDAO.cargar();
+                habitacion.setEstado("OCUPADO");
+                alojamientoDAO.guardar(a);
+                habitacionDAO.actualizar(habitacion);
+                cargarBotonesHabitacion();
 
-        for (Habitacion h : habitacionDAO.cargar()) {
-            if (h.getEstado().equalsIgnoreCase(estado)) {
-                if (estado.equals("OCUPADO")) {
-                    Alojamiento encontrado = alojamientos.stream()
-                            .filter(a -> a.getHabitacion().getNumero().equals(h.getNumero()))
-                            .findFirst().orElse(null);
+                JOptionPane.showMessageDialog(this, "Registro exitoso.\nTotal con IGV: S/. " + String.format("%.2f", totalIGV));
 
-                    if (encontrado != null) {
-                        long dias = (encontrado.getFechaSalida().getTime() - encontrado.getFechaEntrada().getTime()) / (1000 * 60 * 60 * 24);
-                        JButton btnGestionar = new JButton("Gestionar");
-                        btnGestionar.addActionListener(evt -> mostrarPanelGestion(encontrado.getCliente(), "DNI123", (int) dias, h.getTipo(), "", h.getPrecio(), 0));
-                        double total = h.getPrecio() * dias;
-                        double igv = total * 0.18;
-                        double totalConIGV = total + igv;
-
-                        modelo.addRow(new Object[]{
-                                h.getId(), h.getNumero(), h.getTipo(), h.getEstado(), h.getPrecio(),
-                                encontrado.getCliente(), "DNI123", "987654321", dias, totalConIGV, btnGestionar
-                        });
-                    }
-                } else {
-                    modelo.addRow(new Object[]{h.getId(), h.getNumero(), h.getTipo(), h.getEstado(), h.getPrecio(), "", "", "", "", "", ""});
-                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error al registrar: " + ex.getMessage());
             }
         }
     }
 
-    private void mostrarPanelGestion(String cliente, String dni, int dias, String tipo, String servicio, double precioHab, double precioServ) {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.add(new JLabel("Cliente: " + cliente));
-        panel.add(new JLabel("DNI: " + dni));
-        panel.add(new JLabel("Tipo: " + tipo));
-        panel.add(new JLabel("Servicio: " + servicio));
-        panel.add(new JLabel("Precio Habitación: S/." + precioHab));
-        panel.add(new JLabel("Precio Servicio: S/." + precioServ));
-        panel.add(new JLabel("Días: " + dias));
+    private void mostrarPanelGestion(Alojamiento a) {
+        Habitacion habitacion = a.getHabitacion();
+        JTextField txtCliente = new JTextField(a.getCliente());
+        JTextField txtDni = new JTextField(a.getDni());
+        JTextField txtDias = new JTextField(String.valueOf(a.getDiasEstadia()));
+        JComboBox<String> cboServicio = new JComboBox<>(new String[]{"NINGUNO", "ALMUERZO", "CENA", "BEBIDAS", "PAQUETE COMPLETO"});
+        cboServicio.setSelectedItem(a.getServicio());
 
-        JButton btnActualizar = new JButton("Actualizar");
+        JPanel panel = new JPanel(new GridLayout(0, 2));
+        panel.add(new JLabel("Cliente:"));
+        panel.add(txtCliente);
+        panel.add(new JLabel("DNI:"));
+        panel.add(txtDni);
+        panel.add(new JLabel("Días:"));
+        panel.add(txtDias);
+        panel.add(new JLabel("Servicio:"));
+        panel.add(cboServicio);
+
         JButton btnGuardar = new JButton("Guardar");
         JButton btnEliminar = new JButton("Eliminar");
-        JPanel acciones = new JPanel();
-        acciones.add(btnActualizar);
-        acciones.add(btnGuardar);
-        acciones.add(btnEliminar);
-        panel.add(acciones);
+        panel.add(btnGuardar);
+        panel.add(btnEliminar);
 
-        JOptionPane.showMessageDialog(this, panel, "Gestión de Estancia", JOptionPane.PLAIN_MESSAGE);
-    }
+        JDialog dialog = new JDialog(this, "Gestión", true);
+        dialog.setContentPane(panel);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
 
-    private void gestionarEstadia(Alojamiento a) {
-        mostrarPanelGestion(a.getCliente(), "DNI123", 3, a.getHabitacion().getTipo(), "", a.getHabitacion().getPrecio(), 0);
+        btnGuardar.addActionListener(e -> {
+            try {
+                a.setCliente(txtCliente.getText());
+                a.setDni(txtDni.getText());
+                a.setServicio((String) cboServicio.getSelectedItem());
+                a.setDiasEstadia(Integer.parseInt(txtDias.getText()));
+                alojamientoDAO.actualizar(a);
+                dialog.dispose();
+                cargarBotonesHabitacion();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog, "Error: " + ex.getMessage());
+            }
+        });
+
+        btnEliminar.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(dialog, "¿Eliminar alojamiento?", "Confirmar", JOptionPane.YES_NO_OPTION);
+            if (confirm == JOptionPane.YES_OPTION) {
+                alojamientoDAO.eliminar(a);
+                habitacion.setEstado("DISPONIBLE");
+                habitacionDAO.actualizar(habitacion);
+                dialog.dispose();
+                cargarBotonesHabitacion();
+            }
+        });
+
+        dialog.setVisible(true);
     }
 }
 
@@ -490,12 +871,13 @@ class LoginFrame extends JFrame {
 
 // === APP PRINCIPAL ===
 public class HotelAppRefactor extends JFrame {
-
+    public static Runnable vistaAlojamientoUpdater;
+    private FormularioHabitacion formularioHabitacion;  // referencia global
     private final HabitacionDAO habitacionDAO = new HabitacionDAO();
     private final AlojamientoDAO alojamientoDAO = new AlojamientoDAO();
     private final ServicioDAO servicioDAO = new ServicioDAO();
     private ArrayList<Habitacion> habitaciones = generarHabitaciones();
-
+    private Map<String, Habitacion> mapaHabitaciones = new HashMap<>();
     private ArrayList<Habitacion> generarHabitaciones() {
         ArrayList<Habitacion> lista = new ArrayList<>();
         int id = 1;
@@ -515,6 +897,7 @@ public class HotelAppRefactor extends JFrame {
 
         return lista;
     }
+    //Index//
 
     public HotelAppRefactor() {
         habitaciones = generarHabitaciones();
@@ -524,19 +907,48 @@ public class HotelAppRefactor extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
         setJMenuBar(crearMenuBar());
+
         JLabel imagen = new JLabel();
         imagen.setHorizontalAlignment(SwingConstants.CENTER);
-        try {
-            ImageIcon icon = new ImageIcon(getClass().getResource("hotel.jpg"));
-            Image img = icon.getImage().getScaledInstance(1000, 1000, Image.SCALE_SMOOTH);
-            imagen.setIcon(new ImageIcon(img));
-        } catch (Exception e) {
-            imagen.setText("Bienvenido al Sistema Hotelero");
-            imagen.setFont(new Font("Segoe UI", Font.BOLD, 28));
-            imagen.setForeground(new Color(45, 45, 45));
-        }
         add(imagen, BorderLayout.CENTER);
+
+        // Escala la imagen al iniciar
+        escalarImagenALabel(imagen, "hotel.jpg");
+
+        // Escala automáticamente cuando se redimensiona con mejor rendimiento
+        imagen.addComponentListener(new ComponentAdapter() {
+            private Timer resizeTimer;
+
+            @Override
+            public void componentResized(ComponentEvent e) {
+                if (resizeTimer != null && resizeTimer.isRunning()) {
+                    resizeTimer.restart();
+                } else {
+                    resizeTimer = new Timer(50, ev -> {
+                        escalarImagenALabel(imagen, "hotel.jpg");
+                        resizeTimer.stop();
+                    });
+                    resizeTimer.setRepeats(false);
+                    resizeTimer.start();
+                }
+            }
+        });
+
         setVisible(true);
+    }
+
+    private void escalarImagenALabel(JLabel label, String rutaImagen) {
+        try {
+            ImageIcon icon = new ImageIcon(getClass().getResource(rutaImagen));
+            Image img = icon.getImage();
+            Image imgEscalada = img.getScaledInstance(label.getWidth(), label.getHeight(), Image.SCALE_FAST);
+            label.setIcon(new ImageIcon(imgEscalada));
+            label.setText(""); // Por si antes mostraba texto de error
+        } catch (Exception e) {
+            label.setText("Imagen no encontrada");
+            label.setFont(new Font("Segoe UI", Font.BOLD, 28));
+            label.setForeground(new Color(45, 45, 45));
+        }
     }
 
     private JMenuBar crearMenuBar() {
@@ -550,12 +962,6 @@ public class HotelAppRefactor extends JFrame {
         JMenu menuRegistro = new JMenu("Facturación");
         menuRegistro.add(crearItem("Generar Factura", e -> vistaFacturacion()));
 
-        JMenu menuReportes = new JMenu("Reportes");
-        menuReportes.add(crearItem("Resumen General", e -> vistaResumen()));
-
-        JMenu menuHerramientas = new JMenu("Herramientas");
-        menuHerramientas.add(crearItem("Operaciones Básicas", e -> vistaOperaciones()));
-
         JMenu menuAyuda = new JMenu("Ayuda");
         menuAyuda.add(crearItem("Acerca del sistema", e -> JOptionPane.showMessageDialog(this,
                 "Sistema de Gestión Hotelera\nVersión 1.0\nDesarrollado por sebastian casas")));
@@ -564,8 +970,6 @@ public class HotelAppRefactor extends JFrame {
 
         menuBar.add(menuGestion);
         menuBar.add(menuRegistro);
-        menuBar.add(menuReportes);
-        menuBar.add(menuHerramientas);
         menuBar.add(menuAyuda);
         return menuBar;
     }
@@ -575,7 +979,13 @@ public class HotelAppRefactor extends JFrame {
         item.addActionListener(action);
         return item;
     }
-
+    
+    public static void actualizarVistaAlojamiento() {
+    if (vistaAlojamientoUpdater != null) {
+        vistaAlojamientoUpdater.run();
+    }
+}
+    
     private void abrirFormularioServicio() {
         JFrame frame = new JFrame("Registro de Servicio");
         frame.setSize(400, 350);
@@ -651,11 +1061,15 @@ public class HotelAppRefactor extends JFrame {
         JComboBox<String> cboHabitacion = new JComboBox<>();
         JCheckBox chkAnticipado = new JCheckBox("Reservado con anticipación");
 
-        JSpinner spnEntrada = new JSpinner(new SpinnerDateModel());
-        spnEntrada.setEditor(new JSpinner.DateEditor(spnEntrada, "dd/MM/yyyy"));
+        Date hoy = new Date();
 
-        JSpinner spnSalida = new JSpinner(new SpinnerDateModel());
-        spnSalida.setEditor(new JSpinner.DateEditor(spnSalida, "dd/MM/yyyy"));
+        JDateChooser dateEntrada = new JDateChooser();
+        dateEntrada.setDateFormatString("dd/MM/yyyy");
+        dateEntrada.setMinSelectableDate(hoy);
+
+        JDateChooser dateSalida = new JDateChooser();
+        dateSalida.setDateFormatString("dd/MM/yyyy");
+        dateSalida.setMinSelectableDate(hoy);
 
         JSpinner spnHora = new JSpinner(new SpinnerDateModel());
         spnHora.setEditor(new JSpinner.DateEditor(spnHora, "HH:mm"));
@@ -701,13 +1115,13 @@ public class HotelAppRefactor extends JFrame {
         gbc.gridy = ++y;
         dialog.add(new JLabel("Fecha Entrada:"), gbc);
         gbc.gridx = 1;
-        dialog.add(spnEntrada, gbc);
+        dialog.add(dateEntrada, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = ++y;
         dialog.add(new JLabel("Fecha Salida:"), gbc);
         gbc.gridx = 1;
-        dialog.add(spnSalida, gbc);
+        dialog.add(dateSalida, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = ++y;
@@ -748,90 +1162,114 @@ public class HotelAppRefactor extends JFrame {
         cboTipo.addActionListener(e -> {
             String tipoSeleccionado = (String) cboTipo.getSelectedItem();
             cboHabitacion.removeAllItems();
+            mapaHabitaciones.clear(); // 
+
             int disponibles = 0;
+            List<Habitacion> habitaciones = habitacionDAO.cargar();
             for (Habitacion h : habitaciones) {
                 if (h.getTipo().equalsIgnoreCase(tipoSeleccionado) && h.getEstado().equalsIgnoreCase("DISPONIBLE")) {
-                    cboHabitacion.addItem(h.getNumero());
+                    String label = "Habitación " + h.getTipo().substring(0, 1).toUpperCase()
+                            + h.getTipo().substring(1).toLowerCase()
+                            + " " + h.getNumero().replace("HAB", "");
+                    cboHabitacion.addItem(label);
+                    mapaHabitaciones.put(label, h);     
                     disponibles++;
                 }
             }
             txtDisponibles.setText("Disponibles: " + disponibles);
-            actualizarPrecios(cboHabitacion, spnEntrada, spnSalida, txtPrecioDia, txtPrecioTotal);
+            actualizarPrecios(cboHabitacion, dateEntrada, dateSalida, txtPrecioDia, txtPrecioTotal);
         });
-
-        cboHabitacion.addActionListener(e -> actualizarPrecios(cboHabitacion, spnEntrada, spnSalida, txtPrecioDia, txtPrecioTotal));
-        spnEntrada.addChangeListener(e -> actualizarPrecios(cboHabitacion, spnEntrada, spnSalida, txtPrecioDia, txtPrecioTotal));
-        spnSalida.addChangeListener(e -> actualizarPrecios(cboHabitacion, spnEntrada, spnSalida, txtPrecioDia, txtPrecioTotal));
 
         btnGuardar.addActionListener(e -> {
             String cliente = txtCliente.getText().trim();
-            String tipo = (String) cboTipo.getSelectedItem();
-            String numeroHab = (String) cboHabitacion.getSelectedItem();
+            String seleccion = (String) cboHabitacion.getSelectedItem();
 
-            if (cliente.isEmpty() || numeroHab == null) {
+            if (cliente.isEmpty() || seleccion == null || dateEntrada.getDate() == null || dateSalida.getDate() == null) {
                 JOptionPane.showMessageDialog(dialog, "Debe completar todos los campos.");
                 return;
             }
 
-            Habitacion habSeleccionada = null;
-            for (Habitacion h : habitaciones) {
-                if (h.getNumero().equals(numeroHab)) {
-                    habSeleccionada = h;
-                    break;
-                }
-            }
+            Habitacion habSeleccionada = mapaHabitaciones.get(seleccion);
 
             if (habSeleccionada == null) {
                 JOptionPane.showMessageDialog(dialog, "Habitación no encontrada.");
                 return;
             }
 
-            Date entrada = (Date) spnEntrada.getValue();
-            Date salida = (Date) spnSalida.getValue();
+            Date entrada = dateEntrada.getDate();
+            Date salida = dateSalida.getDate();
             String hora = new SimpleDateFormat("HH:mm").format((Date) spnHora.getValue());
 
             Alojamiento alojamiento = new Alojamiento(cliente, habSeleccionada, chkAnticipado.isSelected(), entrada, salida, hora);
             alojamientoDAO.guardar(alojamiento);
             habSeleccionada.setEstado("OCUPADO");
-
-            JOptionPane.showMessageDialog(dialog, "Reservación Realizada \nMétodo de pago: " + cboPago.getSelectedItem());
+            habitacionDAO.actualizar(habSeleccionada);
+            JOptionPane.showMessageDialog(dialog, "Reservación Realizada\nMétodo de pago: " + cboPago.getSelectedItem());
             dialog.dispose();
+        });
+        // Actualizar precio cuando se selecciona una habitación
+        cboHabitacion.addActionListener(e -> {
+            actualizarPrecios(cboHabitacion, dateEntrada, dateSalida, txtPrecioDia, txtPrecioTotal);
+        });
+
+        // Actualizar precio cuando cambia la fecha de entrada
+        dateEntrada.getDateEditor().addPropertyChangeListener("date", e -> {
+            actualizarPrecios(cboHabitacion, dateEntrada, dateSalida, txtPrecioDia, txtPrecioTotal);
+        });
+
+        // Actualizar precio cuando cambia la fecha de salida
+        dateSalida.getDateEditor().addPropertyChangeListener("date", e -> {
+            actualizarPrecios(cboHabitacion, dateEntrada, dateSalida, txtPrecioDia, txtPrecioTotal);
         });
 
         dialog.setVisible(true);
     }
 
-    private void actualizarPrecios(JComboBox<String> cboHabitacion, JSpinner spnEntrada, JSpinner spnSalida, JTextField txtPrecioDia, JTextField txtPrecioTotal) {
-        String numeroHab = (String) cboHabitacion.getSelectedItem();
-        if (numeroHab == null) {
+    private void actualizarPrecios(JComboBox<String> cboHabitacion, JDateChooser entrada, JDateChooser salida,
+                               JTextField txtPrecioDia, JTextField txtPrecioTotal) {
+    try {
+        String seleccion = (String) cboHabitacion.getSelectedItem();
+        if (seleccion == null || seleccion.trim().isEmpty()) {
+            txtPrecioDia.setText("");
+            txtPrecioTotal.setText("");
             return;
         }
 
-        Habitacion habSeleccionada = null;
-        for (Habitacion h : habitaciones) {
-            if (h.getNumero().equals(numeroHab)) {
-                habSeleccionada = h;
-                break;
-            }
-        }
-        if (habSeleccionada == null) {
+        // Usar el mapaHabitaciones directamente
+        Habitacion hab = mapaHabitaciones.get(seleccion);
+        if (hab == null) {
+            txtPrecioDia.setText("");
+            txtPrecioTotal.setText("");
             return;
         }
 
-        Date entrada = (Date) spnEntrada.getValue();
-        Date salida = (Date) spnSalida.getValue();
-        long dias = (salida.getTime() - entrada.getTime()) / (1000 * 60 * 60 * 24);
-        if (dias <= 0) {
-            dias = 1;
+        Date fEntrada = entrada.getDate();
+        Date fSalida = salida.getDate();
+        if (fEntrada == null || fSalida == null || fSalida.before(fEntrada)) {
+            txtPrecioDia.setText(String.format("S/. %.2f", hab.getPrecio()));
+            txtPrecioTotal.setText("");
+            return;
         }
 
-        double precioDia = habSeleccionada.getPrecio();
+        // Calcular días entre fechas
+        LocalDate fechaEntrada = fEntrada.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalDate fechaSalida = fSalida.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        long dias = ChronoUnit.DAYS.between(fechaEntrada, fechaSalida);
+        if (dias < 1) dias = 1;
+
+        double precioDia = hab.getPrecio();
         double subtotal = precioDia * dias;
-        double totalConIGV = subtotal * 1.18;
+        double igv = subtotal * 0.18;
+        double totalConIGV = subtotal + igv;
 
-        txtPrecioDia.setText(String.format("%.2f", precioDia));
-        txtPrecioTotal.setText(String.format("%.2f", totalConIGV));
+        txtPrecioDia.setText(String.format("S/. %.2f", precioDia));
+        txtPrecioTotal.setText(String.format("S/. %.2f", totalConIGV));
+    } catch (Exception e) {
+        e.printStackTrace();
     }
+}
+
+
 
     private void vistaServicio() {
         JTextField nombre = new JTextField();
@@ -917,33 +1355,6 @@ public class HotelAppRefactor extends JFrame {
         area.setText(sb.toString());
         dialog.add(new JScrollPane(area), BorderLayout.CENTER);
         dialog.setVisible(true);
-    }
-
-    private void vistaOperaciones() {
-        JTextField a = new JTextField();
-        JTextField b = new JTextField();
-        JButton calcular = new JButton("Calcular");
-
-        calcular.addActionListener(e -> {
-            try {
-                double x = Double.parseDouble(a.getText());
-                double y = Double.parseDouble(b.getText());
-                String result = String.format("""
-                        Suma: %.2f
-                        Resta: %.2f
-                        Multiplicación: %.2f
-                        División: %s
-                    """, x + y, x - y, x * y, y != 0 ? String.format("%.2f", x / y) : "Indefinido");
-                JOptionPane.showMessageDialog(this, result);
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Ingrese números válidos.");
-            }
-        });
-
-        mostrarFormulario("Cálculos Básicos", new JComponent[]{
-            new JLabel("Número A:"), a,
-            new JLabel("Número B:"), b
-        }, calcular);
     }
 
     private void vistaResumen() {
