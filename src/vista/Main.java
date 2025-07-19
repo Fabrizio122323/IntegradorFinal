@@ -1,3 +1,9 @@
+tyytyty
+        t
+yt
+yt
+
+
 package vista;
 
 import javax.swing.*;
